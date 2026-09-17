@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registro de Fallas - Cliente</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f4f6f9;margin:0;padding:15px}
+.container{max-width:750px;margin:auto;background:white;padding:20px;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.12)}
+.header{text-align:center;border-bottom:2px solid #0d2a54;padding-bottom:12px}
+.header img{max-height:80px;max-width:220px;display:block;margin:0 auto 8px auto}
+h1{color:#0d2a54;font-size:22px}
+label{font-weight:bold;margin-top:12px;display:block}
+input,select,textarea{width:100%;padding:11px;margin-top:5px;border:1px solid #ccc;border-radius:8px;box-sizing:border-box}
+button{background:#0d2a54;color:white;padding:13px;width:100%;border:none;border-radius:8px;margin-top:15px;font-size:16px;cursor:pointer;font-weight:bold}
+.card{border-left:5px solid #e67e22;padding:12px;border-radius:8px;margin-top:12px;background:#fafafa}
+.badge{padding:3px 10px;border-radius:12px;font-size:11px;color:white}
+.pendiente{background:#e67e22}.resuelto-bg{background:#27ae60}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<img id="logoPreview" style="display:none">
+<h1>CONTROL DE FALLAS DE EQUIPOS</h1>
+<small>Modelo + Falla</small>
+<input type="file" id="logoInput" accept="image/*" onchange="cargarLogo(event)">
+</div>
+
+<label>Modelo</label>
+<input list="modelos" id="modelo" placeholder="Zebra 410, Dell 7010...">
+<datalist id="modelos">
+<option value="PC Dell Optiplex 7010"><option value="PC HP ProDesk 400">
+<option value="Impresora Zebra 410"><option value="Impresora Zebra GC420">
+<option value="POS Verifone"><option value="POS PAX"><option value="Otro">
+</datalist>
+
+<label>Falla</label>
+<textarea id="falla" rows="3" placeholder="Ej: No enciende..."></textarea>
+
+<label>Area</label>
+<input id="area" placeholder="Ej: Caja, Almacen...">
+
+<label>Prioridad</label>
+<select id="prioridad"><option>Alta</option><option>Media</option><option>Baja</option></select>
+
+<button onclick="guardar()">GUARDAR FALLA</button>
+<input id="search" placeholder="Buscar..." oninput="render()" style="margin-top:18px">
+<div id="lista"></div>
+<button onclick="exportar()" style="background:#27ae60">Exportar a Excel</button>
+</div>
+
+<script>
+let datos=JSON.parse(localStorage.getItem('fallas_pro_final')||'[]');
+function guardar(){
+let m=modelo.value.trim(),f=falla.value.trim();
+if(!m||!f){alert('Pon modelo y falla');return}
+datos.unshift({id:Date.now(),modelo:m,falla:f,area:area.value,prioridad:prioridad.value,fecha:new Date().toLocaleString(),estado:'Pendiente'});
+localStorage.setItem('fallas_pro_final',JSON.stringify(datos));modelo.value='';falla.value='';render();
+}
+function render(){
+let q=search.value.toLowerCase();let html='';
+datos.filter(d=>(d.modelo+' '+d.falla).toLowerCase().includes(q)).forEach(d=>{
+html+=`<div class=card><b>${d.modelo}</b> - ${d.falla}<br><small>${d.fecha} | ${d.area}</small><br><button onclick="cambiar(${d.id})" style="width:auto;padding:5px;background:#27ae60">Resolver</button> <button onclick="borrar(${d.id})" style="width:auto;padding:5px;background:#c0392b">Borrar</button></div>`;
+});lista.innerHTML=html||'Sin registros';
+}
+function cambiar(id){let d=datos.find(x=>x.id==id);d.estado=d.estado=='Pendiente'?'Resuelto':'Pendiente';localStorage.setItem('fallas_pro_final',JSON.stringify(datos));render();}
+function borrar(id){datos=datos.filter(x=>x.id!=id);localStorage.setItem('fallas_pro_final',JSON.stringify(datos));render();}
+function exportar(){let csv='Modelo,Falla,Area,Fecha\\n';datos.forEach(d=>{csv+=`"${d.modelo}","${d.falla}","${d.area}","${d.fecha}"\\n`;});let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='fallas.csv';a.click();}
+function cargarLogo(e){let r=new FileReader();r.onload=ev=>{localStorage.setItem('logo',ev.target.result);logoPreview.src=ev.target.result;logoPreview.style.display='block';};r.readAsDataURL(e.target.files[0]);}
+render();
+</script>
+</body>
+</html>
